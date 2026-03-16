@@ -1,89 +1,166 @@
-# Land Registry Command Platform
+# Land Registry DApp
 
-Production-style full-stack land registry dApp with:
-- Smart contract + NFT-backed properties
-- Multi-level government approvals
-- Ownership timeline tracking
-- AI fraud detection (`IsolationForest`)
-- React operations dashboard
+A production-style full-stack decentralized application for land/property registration, verification, and ownership transfer.
+
+## Why This Application Was Built
+
+Traditional land record workflows are often slow, paper-heavy, and difficult to audit. This project was built to demonstrate a transparent, tamper-resistant workflow where:
+
+- Property records are represented on-chain.
+- Multi-stage government approvals are enforced by system logic.
+- Ownership history can be traced clearly.
+- AI-assisted checks can help flag suspicious activity.
+
+## Core Features
+
+- NFT-backed property registration
+- Multi-level approval pipeline (`tehsildar -> sdm -> collector`)
+- On-chain ownership transfer flow
+- Property timeline and dashboard analytics
+- AI fraud-risk scoring support (`IsolationForest`)
 
 ## Tech Stack
-- `client`: React + Vite + Leaflet
-- `server`: Node.js + Express + MongoDB + Ethers
-- `blockchain`: Solidity + Hardhat
-- `ai-module`: Python + scikit-learn
+
+- `client`: React, Vite, Leaflet
+- `server`: Node.js, Express, MongoDB, Ethers
+- `blockchain`: Solidity, Hardhat, OpenZeppelin
+- `ai-module`: Python, scikit-learn
+
+## Project Structure
+
+```text
+land-registry-dapp/
+|- client/                # Frontend (React + Vite)
+|  |- src/
+|  |- public/
+|  |- .env.example
+|- server/                # Backend API (Express + MongoDB + Ethers)
+|  |- src/
+|  |- .env.example
+|- blockchain/            # Smart contracts + Hardhat scripts/tests
+|  |- contracts/
+|  |- scripts/
+|  |- test/
+|- ai-module/             # Python fraud detection module
+|- scripts/               # Utility scripts (deploy/env sync)
+|- package.json           # Root workspace scripts
+|- .env.example           # Shared env placeholders
+```
 
 ## Prerequisites
-- Node.js `>=20`
-- Python `>=3.10`
-- MongoDB running locally (`mongodb://127.0.0.1:27017`)
 
-## Setup
-1. Install workspace packages:
+- Node.js `>= 20`
+- npm `>= 9`
+- Python `>= 3.10`
+- MongoDB running locally (`mongodb://127.0.0.1:27017`)
+- MetaMask (for wallet interaction in browser)
+
+## Environment Configuration
+
+1. Create backend env file:
+```bash
+cp server/.env.example server/.env
+```
+2. Create frontend env file:
+```bash
+cp client/.env.example client/.env
+```
+3. Update values in `server/.env`:
+- `MONGO_URI`
+- `RPC_URL`
+- `PRIVATE_KEY`
+- `CONTRACT_ADDRESS` (after deployment)
+- `ACCESS_TOKEN_SECRET`
+- `REFRESH_TOKEN_SECRET`
+
+## Installation
+
+1. Install workspace dependencies:
 ```bash
 npm run install:all
 ```
-2. Install AI packages:
+2. Install AI dependencies:
 ```bash
 pip install -r ai-module/requirements.txt
 ```
-3. Configure env:
-- Copy `server/.env.example` to `server/.env`
-- Copy `client/.env.example` to `client/.env` (optional if same defaults)
 
-## Run Locally
-1. Start blockchain node:
+## How To Run (Step-by-Step)
+
+Open multiple terminals from project root and follow this order.
+
+1. Start local blockchain node:
 ```bash
 npm run dev:blockchain
 ```
-2. Deploy contract (new terminal):
-```bash
-cd blockchain
-npx hardhat run scripts/deploy.js --network localhost
-```
-Or use automated local deploy + env sync:
+
+2. Deploy smart contract (new terminal):
 ```bash
 npm run ops:deploy-sync
 ```
-3. Put deployed address in `server/.env` as `CONTRACT_ADDRESS`.
-4. Start backend + frontend:
+This script deploys contract to local Hardhat node and syncs deployment data for app usage.
+
+3. Start backend API (new terminal):
 ```bash
 npm run dev:server
+```
+
+4. Start frontend app (new terminal):
+```bash
 npm run dev:client -- --host 0.0.0.0 --port 5173
 ```
 
-Or run all together:
+5. Open browser:
+`http://localhost:5173`
+
+## One-Command Development Mode
+
+If your env is already configured, you can run all services together:
+
 ```bash
 npm run dev
 ```
 
-## MetaMask Setup
+## MetaMask Local Network Setup
+
 - RPC URL: `http://127.0.0.1:8545`
 - Chain ID: `31337`
-- Currency: `ETH`
-- Import a Hardhat account private key from node output
+- Currency symbol: `ETH`
+- Import one account from Hardhat node private keys
 
-## Key User Flows
-- Register Property: draw polygon + upload document content
-- Verify Property: approve `tehsildar -> sdm -> collector` then verify
-- Transfer Property: transfer owner after approvals
-- Dashboard: risk filtering, table/cards view, alerts, gas comparison, timeline
+## Testing
 
-## API Role Header Requirement
-Backend expects:
-- `x-user-role`: `admin|officer|buyer|auditor|tehsildar|sdm|collector`
-- `x-user-id`: any user identifier string
+Run blockchain tests:
 
-Frontend sets these automatically from role switcher + wallet.
-
-## Operator Preflight
-Before business testing, run diagnostics from Dashboard or call:
 ```bash
+npm run test:blockchain
+```
+
+## API Notes
+
+The backend uses headers for role simulation:
+
+- `x-user-role`: `admin|officer|buyer|auditor|tehsildar|sdm|collector`
+- `x-user-id`: any user identifier
+
+Frontend sets these automatically through the app role controls.
+
+## Diagnostics
+
+Preflight endpoint:
+
+```http
 GET /api/system/preflight
 ```
-Checks included:
-- Mongo connectivity
-- RPC connectivity
-- Contract deployed at configured address
-- Auth context validity
-- Parcel lookup health
+
+Checks include DB connectivity, RPC availability, contract configuration, auth context, and parcel lookup health.
+
+## Security and Repository Hygiene
+
+- Do not commit real `.env` files.
+- Keep only `.env.example` in version control.
+- Do not commit `node_modules`, build outputs, or logs.
+- Rotate any secret that was exposed accidentally.
+
+## License
+
+Add your preferred license before public production use.
