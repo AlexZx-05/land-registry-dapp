@@ -1,0 +1,39 @@
+{
+  "name": "land-registry-dapp",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "client",
+    "server",
+    "blockchain"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev:client": "npm --workspace client run dev",
+    "dev:server": "npm --workspace server run dev",
+    "dev:blockchain": "npm --workspace blockchain run node",
+    "ops:deploy-sync": "node scripts/deploy-sync-local.mjs",
+    "dev": "concurrently -n chain,server,client -c cyan,green,magenta \"npm run dev:blockchain\" \"npm run dev:server\" \"npm run dev:client -- --host 0.0.0.0 --port 5173\"",
+    "test:blockchain": "npm --workspace blockchain run test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "dependencies": {
+    "es-errors": "^1.3.0",
+    "es-object-atoms": "^1.1.1",
+    "function-bind": "^1.1.2",
+    "get-intrinsic": "^1.3.0",
+    "get-proto": "^1.0.1",
+    "gopd": "^1.2.0",
+    "has-symbols": "^1.1.0",
+    "hasown": "^2.0.2",
+    "math-intrinsics": "^1.1.0",
+    "object-inspect": "^1.13.4",
+    "picomatch": "^4.0.3",
+    "readable-stream": "^4.7.0",
+    "side-channel-list": "^1.0.0",
+    "side-channel-map": "^1.0.1",
+    "side-channel-weakmap": "^1.0.2"
+  }
+}
