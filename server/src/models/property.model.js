@@ -7,14 +7,61 @@ const propertySchema = new mongoose.Schema(
       required: true,
       unique: true
     },
+    registrationScope: {
+      type: String,
+      enum: ["local", "global"],
+      default: "local"
+    },
     surveyNumber: {
       type: String,
-      required: true,
+      required: false,
+      default: "",
       index: true
     },
     parcelId: {
       type: String,
-      required: true
+      required: false,
+      default: ""
+    },
+    jurisdiction: {
+      countryCode: {
+        type: String,
+        default: ""
+      },
+      countryName: {
+        type: String,
+        default: ""
+      },
+      stateProvince: {
+        type: String,
+        default: ""
+      },
+      cityDistrict: {
+        type: String,
+        default: ""
+      },
+      landRegistryOffice: {
+        type: String,
+        default: ""
+      },
+      parcelReference: {
+        type: String,
+        default: ""
+      },
+      titleDeedNumber: {
+        type: String,
+        default: ""
+      }
+    },
+    claimant: {
+      ownerFullName: {
+        type: String,
+        default: ""
+      },
+      ownerWallet: {
+        type: String,
+        default: ""
+      }
     },
     geometrySource: {
       type: String,

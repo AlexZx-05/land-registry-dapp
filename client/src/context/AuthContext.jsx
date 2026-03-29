@@ -44,7 +44,11 @@ export function AuthProvider({ children }) {
       },
       async signupAction(payload) {
         const result = await signup(payload);
-        setUser(result.user);
+        if (result?.accessToken && result?.user) {
+          setUser(result.user);
+        } else {
+          setUser(null);
+        }
         return result;
       },
       async logoutAction() {

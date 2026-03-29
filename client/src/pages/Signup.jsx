@@ -18,7 +18,11 @@ export default function Signup() {
     event.preventDefault();
     setStatus("Creating account...");
     try {
-      await signupAction({ name, email, password, role });
+      const result = await signupAction({ name, email, password, role });
+      if (result?.pendingApproval) {
+        setStatus(result.message || "Account created and sent for approval. You can login after approval.");
+        return;
+      }
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setStatus(error.response?.data?.message || error.message);

@@ -5,6 +5,7 @@ const LAND_REGISTRY_ABI = [
   "function registerProperty(string memory _polygon, string memory _ipfsHash) external",
   "function transferOwnership(uint256 _id, address _newOwner) external",
   "function verifyProperty(uint256 _id) external",
+  "function propertyCount() external view returns (uint256)",
   "function getProperty(uint256 _id) external view returns (uint256 id, address owner, string memory polygon, string memory ipfsHash, bool verified)",
   "function ownerOf(uint256 tokenId) external view returns (address)"
 ];
@@ -91,6 +92,7 @@ export async function compareGasScenarios() {
   const contract = getContract();
   const feeData = await contract.runner.provider.getFeeData();
   const baseGasPrice = feeData.gasPrice || ethers.parseUnits("1", "gwei");
+  const propertyCount = Number(await contract.propertyCount());
 
   const registerGas = await contract.registerProperty.estimateGas(
     "[[28.6139,77.2090],[28.6145,77.2101],[28.6141,77.2082]]",
@@ -99,16 +101,18 @@ export async function compareGasScenarios() {
 
   let transferGas = 0n;
   let verifyGas = 0n;
-  try {
-    transferGas = await contract.transferOwnership.estimateGas(1, contract.runner.address);
-  } catch {
-    transferGas = 0n;
-  }
+  if (propertyCount > 0) {
+    try {
+      transferGas = await contract.transferOwnership.estimateGas(1, contract.runner.address);
+    } catch {
+      transferGas = 0n;
+    }
 
-  try {
-    verifyGas = await contract.verifyProperty.estimateGas(1);
-  } catch {
-    verifyGas = 0n;
+    try {
+      verifyGas = await contract.verifyProperty.estimateGas(1);
+    } catch {
+      verifyGas = 0n;
+    }
   }
 
   const levels = [

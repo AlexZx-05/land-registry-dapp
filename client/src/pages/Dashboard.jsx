@@ -157,94 +157,104 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Property Index</h3>
-          <div className="search-tools">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search chain, owner, hash..." />
-            <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
-              <option value="all">All Risk</option>
-              <option value="high">Flagged Only</option>
-              <option value="low">Clean Only</option>
-            </select>
-            <div className="view-toggle">
-              <button type="button" className={viewMode === "cards" ? "active" : ""} onClick={() => setViewMode("cards")}>
-                Cards
-              </button>
-              <button type="button" className={viewMode === "table" ? "active" : ""} onClick={() => setViewMode("table")}>
-                Table
-              </button>
+      <details className="dashboard-accordion">
+        <summary>Property Index & Search</summary>
+        <div className="dashboard-accordion-body">
+          <div className="panel">
+            <div className="panel-head">
+              <h3>Property Index</h3>
+              <div className="search-tools">
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search chain, owner, hash..." />
+                <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
+                  <option value="all">All Risk</option>
+                  <option value="high">Flagged Only</option>
+                  <option value="low">Clean Only</option>
+                </select>
+                <div className="view-toggle">
+                  <button type="button" className={viewMode === "cards" ? "active" : ""} onClick={() => setViewMode("cards")}>
+                    Cards
+                  </button>
+                  <button type="button" className={viewMode === "table" ? "active" : ""} onClick={() => setViewMode("table")}>
+                    Table
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="muted">Showing {filteredProperties.length} record(s)</p>
+            {viewMode === "cards" ? (
+              <div className="cards">
+                {filteredProperties.map((property) => (
+                  <PropertyCard key={property._id} property={property} />
+                ))}
+              </div>
+            ) : (
+              <PropertyTable properties={filteredProperties} />
+            )}
+          </div>
+        </div>
+      </details>
+
+      <details className="dashboard-accordion">
+        <summary>Timeline & Gas Intelligence</summary>
+        <div className="dashboard-accordion-body">
+          <div className="grid-2">
+            <div className="panel">
+              <div className="panel-head">
+                <h3>Ownership Timeline</h3>
+                <p className="muted">Track transfer history by chain ID</p>
+              </div>
+              <form className="inline-form timeline-form" onSubmit={loadTimeline}>
+                <label className="timeline-input-wrap">
+                  <span className="muted">Chain ID</span>
+                  <input
+                    value={selectedChainId}
+                    onChange={(e) => {
+                      setSelectedChainId(e.target.value);
+                      if (timelineError) setTimelineError("");
+                    }}
+                    placeholder="Enter chain ID"
+                    required
+                  />
+                </label>
+                <button type="submit">Load Timeline</button>
+              </form>
+              {timelineError ? <p className="status-banner status-error timeline-error">{timelineError}</p> : null}
+              <OwnershipTimeline history={timeline} />
+            </div>
+
+            <div className="panel">
+              <div className="panel-head">
+                <h3>Gas Fee Comparison</h3>
+                <p className="muted">Estimated ETH cost by priority tier</p>
+              </div>
+              <div className="gas-grid">
+                {gasComparison.map((option) => (
+                  <article key={option.level} className="gas-card">
+                    <div className="gas-head">
+                      <h4>{option.level}</h4>
+                      <span className={`chip ${option.level === "low" ? "chip-approved" : option.level === "market" ? "chip-pending" : "chip-rejected"}`}>
+                        {option.level}
+                      </span>
+                    </div>
+                    <div className="gas-row">
+                      <span>Register</span>
+                      <strong>{option.register.eth} ETH</strong>
+                    </div>
+                    <div className="gas-row">
+                      <span>Transfer</span>
+                      <strong>{option.transfer.eth} ETH</strong>
+                    </div>
+                    <div className="gas-row">
+                      <span>Verify</span>
+                      <strong>{option.verify.eth} ETH</strong>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-        <p className="muted">Showing {filteredProperties.length} record(s)</p>
-        {viewMode === "cards" ? (
-          <div className="cards">
-            {filteredProperties.map((property) => (
-              <PropertyCard key={property._id} property={property} />
-            ))}
-          </div>
-        ) : (
-          <PropertyTable properties={filteredProperties} />
-        )}
-      </div>
-
-      <div className="grid-2">
-        <div className="panel">
-          <div className="panel-head">
-            <h3>Ownership Timeline</h3>
-            <p className="muted">Track transfer history by chain ID</p>
-          </div>
-          <form className="inline-form timeline-form" onSubmit={loadTimeline}>
-            <label className="timeline-input-wrap">
-              <span className="muted">Chain ID</span>
-              <input
-                value={selectedChainId}
-                onChange={(e) => {
-                  setSelectedChainId(e.target.value);
-                  if (timelineError) setTimelineError("");
-                }}
-                placeholder="Enter chain ID"
-                required
-              />
-            </label>
-            <button type="submit">Load Timeline</button>
-          </form>
-          {timelineError ? <p className="status-banner status-error timeline-error">{timelineError}</p> : null}
-          <OwnershipTimeline history={timeline} />
-        </div>
-
-        <div className="panel">
-          <div className="panel-head">
-            <h3>Gas Fee Comparison</h3>
-            <p className="muted">Estimated ETH cost by priority tier</p>
-          </div>
-          <div className="gas-grid">
-            {gasComparison.map((option) => (
-              <article key={option.level} className="gas-card">
-                <div className="gas-head">
-                  <h4>{option.level}</h4>
-                  <span className={`chip ${option.level === "low" ? "chip-approved" : option.level === "market" ? "chip-pending" : "chip-rejected"}`}>
-                    {option.level}
-                  </span>
-                </div>
-                <div className="gas-row">
-                  <span>Register</span>
-                  <strong>{option.register.eth} ETH</strong>
-                </div>
-                <div className="gas-row">
-                  <span>Transfer</span>
-                  <strong>{option.transfer.eth} ETH</strong>
-                </div>
-                <div className="gas-row">
-                  <span>Verify</span>
-                  <strong>{option.verify.eth} ETH</strong>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </div>
+      </details>
     </section>
   );
 }

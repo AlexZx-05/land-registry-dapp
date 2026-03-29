@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "install:all": "npm install --workspaces",
-    "dev:client": "npm --workspace client run dev",
+    "dev:client": "npm --workspace client run dev --",
     "dev:server": "npm --workspace server run dev",
     "dev:blockchain": "npm --workspace blockchain run node",
     "ops:deploy-sync": "node scripts/deploy-sync-local.mjs",

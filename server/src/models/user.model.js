@@ -25,6 +25,22 @@ const userSchema = new mongoose.Schema(
       enum: ALLOWED_ROLES,
       default: "buyer"
     },
+    approvalStatus: {
+      type: String,
+      enum: ["approved", "pending", "rejected"],
+      default: "approved"
+    },
+    approvalRemark: {
+      type: String,
+      default: ""
+    },
+    approvedBy: {
+      type: String,
+      default: ""
+    },
+    approvedAt: {
+      type: Date
+    },
     refreshTokenHashes: {
       type: [String],
       default: []

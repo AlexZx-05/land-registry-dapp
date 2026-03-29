@@ -17,6 +17,7 @@ import {
 import { getParcelBySurveyNumber, getWardBoundary } from "../services/parcel.service.js";
 
 const APPROVAL_LEVELS = ["tehsildar", "sdm", "collector"];
+const OWNER_WALLET_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 function parseIssueDate(value) {
   if (!value) return undefined;
@@ -49,24 +50,72 @@ function allApprovalsApproved(property) {
   );
 }
 
+function isValidWallet(value = "") {
+  return OWNER_WALLET_REGEX.test(String(value).trim());
+}
+
 export async function createProperty(req, res) {
   try {
-    const { surveyNumber, geometrySource = "official", polygonCoordinates, documentContent, document } = req.body;
+    const {
+      registrationScope = "local",
+      surveyNumber,
+      geometrySource = "official",
+      polygonCoordinates,
+      documentContent,
+      document,
+      jurisdiction = {},
+      claimant = {}
+    } = req.body;
 
-    if (!surveyNumber) {
-      return res.status(400).json({ message: "surveyNumber is required" });
+    const scope = registrationScope === "global" ? "global" : "local";
+
+    let parcel = null;
+    const normalizedSurveyNumber = String(surveyNumber || "").trim();
+    if (scope === "local") {
+      if (!normalizedSurveyNumber) {
+        return res.status(400).json({ message: "surveyNumber is required for local registrations" });
+      }
+
+      parcel = getParcelBySurveyNumber(normalizedSurveyNumber);
+      if (!parcel) {
+        return res.status(404).json({ message: "Survey number not found in cadastral records" });
+      }
     }
 
-    const parcel = getParcelBySurveyNumber(surveyNumber);
-    if (!parcel) {
-      return res.status(404).json({ message: "Survey number not found in cadastral records" });
+    const claimedWallet = String(claimant.ownerWallet || "").trim();
+    const claimedOwnerName = String(claimant.ownerFullName || "").trim();
+    const jurisdictionMeta = {
+      countryCode: String(jurisdiction.countryCode || "").trim().toUpperCase(),
+      countryName: String(jurisdiction.countryName || "").trim(),
+      stateProvince: String(jurisdiction.stateProvince || "").trim(),
+      cityDistrict: String(jurisdiction.cityDistrict || "").trim(),
+      landRegistryOffice: String(jurisdiction.landRegistryOffice || "").trim(),
+      parcelReference: String(jurisdiction.parcelReference || "").trim(),
+      titleDeedNumber: String(jurisdiction.titleDeedNumber || "").trim()
+    };
+
+    if (scope === "global") {
+      if (!jurisdictionMeta.countryName || !jurisdictionMeta.titleDeedNumber || !jurisdictionMeta.parcelReference) {
+        return res.status(400).json({
+          message: "countryName, parcelReference, and titleDeedNumber are required for global registrations"
+        });
+      }
+      if (!claimedOwnerName) {
+        return res.status(400).json({ message: "claimant.ownerFullName is required for global registrations" });
+      }
+      if (!isValidWallet(claimedWallet)) {
+        return res.status(400).json({ message: "Valid claimant.ownerWallet is required for global registrations" });
+      }
     }
 
     const finalGeometrySource = ["official", "imported", "edited"].includes(geometrySource)
       ? geometrySource
-      : "official";
-    const selectedPolygon =
-      finalGeometrySource === "official" ? parcel.polygonCoordinates : polygonCoordinates;
+      : scope === "local"
+        ? "official"
+        : "edited";
+    const selectedPolygon = scope === "local" && finalGeometrySource === "official"
+      ? parcel.polygonCoordinates
+      : polygonCoordinates;
 
     if (!Array.isArray(selectedPolygon) || selectedPolygon.length < 3) {
       return res.status(400).json({ message: "Valid polygonCoordinates are required for selected geometry source" });
@@ -99,11 +148,9 @@ export async function createProperty(req, res) {
 
       if (normalizedDocument.mimeType === "text/plain") {
         const text = Buffer.from(normalizedDocument.base64, "base64").toString("utf8");
-        const surveyMatch = text.match(/(?:survey|khasra)\s*(?:no|number)?\s*[:\-]?\s*([a-z0-9/.-]+)/i);
-        if (surveyMatch && surveyMatch[1] && surveyMatch[1].trim().toLowerCase() !== String(surveyNumber).toLowerCase()) {
-          return res.status(400).json({
-            message: `Document survey number (${surveyMatch[1]}) does not match selected survey (${surveyNumber})`
-          });
+        const surveyMatch = text.match(/(?:survey|khasra)\s*(?:no\.?|number)?\s*[:\-]?\s*([a-z0-9/.-]+)/i);
+        if (scope === "local" && surveyMatch && surveyMatch[1] && surveyMatch[1].trim().toLowerCase() !== normalizedSurveyNumber.toLowerCase()) {
+          return res.status(400).json({ message: `Document survey number (${surveyMatch[1]}) does not match selected survey (${normalizedSurveyNumber})` });
         }
       }
     } else if (documentContent && typeof documentContent === "string") {
@@ -123,19 +170,19 @@ export async function createProperty(req, res) {
 
     const normalizedPolygon = selectedPolygon.map(([lat, lng]) => [Number(lat), Number(lng)]);
     const polygon = JSON.stringify(normalizedPolygon);
-    const officialArea = Number(parcel.areaSqm || 0);
+    const officialArea = Number(parcel?.areaSqm || 0);
     const currentArea = polygonAreaSqm(normalizedPolygon);
-    const deviation = areaDeviationPercent(officialArea, currentArea);
+    const deviation = scope === "local" ? areaDeviationPercent(officialArea, currentArea) : 0;
 
-    if (finalGeometrySource !== "official" && deviation > 15) {
+    if (scope === "local" && finalGeometrySource !== "official" && deviation > 15) {
       return res.status(400).json({
         message: `Geometry area deviation too high (${deviation.toFixed(2)}%). Max allowed is 15%.`
       });
     }
 
-    const wardBoundary = getWardBoundary();
-    const outsideWardBoundary = !polygonInsideBoundary(normalizedPolygon, wardBoundary);
-    if (outsideWardBoundary) {
+    const wardBoundary = scope === "local" ? getWardBoundary() : null;
+    const outsideWardBoundary = scope === "local" ? !polygonInsideBoundary(normalizedPolygon, wardBoundary) : false;
+    if (scope === "local" && outsideWardBoundary) {
       return res.status(400).json({ message: "Geometry is outside allowed ward boundary" });
     }
 
@@ -153,15 +200,38 @@ export async function createProperty(req, res) {
     });
 
     const ipfsHash = await uploadDocumentToIPFS(normalizedDocument.base64);
-    const parcelHash = `parcel:${createHash("sha256").update(`${surveyNumber}:${polygon}`).digest("hex")}`;
+    const reference = scope === "local"
+      ? normalizedSurveyNumber
+      : `${jurisdictionMeta.countryName}:${jurisdictionMeta.parcelReference}:${jurisdictionMeta.titleDeedNumber}`;
+    const parcelHash = `parcel:${createHash("sha256").update(`${scope}:${reference}:${polygon}`).digest("hex")}`;
     const { receipt, chainId } = await registerOnChain(parcelHash, ipfsHash);
+
+    let finalOwner = receipt.from;
+    let transferReceipt = null;
+    if (scope === "global" && isValidWallet(claimedWallet) && claimedWallet.toLowerCase() !== receipt.from.toLowerCase()) {
+      transferReceipt = await transferOnChain(chainId, claimedWallet);
+      finalOwner = claimedWallet;
+    }
+
+    const propertySurveyNumber = scope === "local"
+      ? normalizedSurveyNumber
+      : jurisdictionMeta.parcelReference || `global-${jurisdictionMeta.countryCode || "XX"}-${chainId}`;
+    const propertyParcelId = scope === "local"
+      ? String(parcel.parcelId || "")
+      : `GLOBAL-${jurisdictionMeta.countryCode || "XX"}-${jurisdictionMeta.parcelReference || chainId}`;
 
     const payload = {
       chainId,
-      surveyNumber: String(surveyNumber),
-      parcelId: parcel.parcelId,
+      registrationScope: scope,
+      surveyNumber: propertySurveyNumber,
+      parcelId: propertyParcelId,
+      jurisdiction: jurisdictionMeta,
+      claimant: {
+        ownerFullName: claimedOwnerName,
+        ownerWallet: claimedWallet
+      },
       geometrySource: finalGeometrySource,
-      owner: receipt.from,
+      owner: finalOwner,
       polygon,
       polygonCoordinates: normalizedPolygon,
       ipfsHash,
@@ -177,7 +247,10 @@ export async function createProperty(req, res) {
       txHash: receipt.hash,
       tokenId: chainId,
       approvals: defaultApprovals(),
-      ownershipHistory: [{ owner: receipt.from, txHash: receipt.hash }],
+      ownershipHistory: [
+        { owner: receipt.from, txHash: receipt.hash },
+        ...(transferReceipt ? [{ owner: finalOwner, txHash: transferReceipt.hash }] : [])
+      ],
       fraud,
       spatialValidation: {
         areaSqm: currentArea,

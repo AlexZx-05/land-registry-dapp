@@ -70,11 +70,21 @@ function estimatePolygonAreaSqm(points = []) {
 }
 
 export default function RegisterProperty() {
+  const [registrationScope, setRegistrationScope] = useState("local");
   const [surveyNumber, setSurveyNumber] = useState("");
   const [parcel, setParcel] = useState(null);
   const [geometrySource, setGeometrySource] = useState("official");
   const [allowEdit, setAllowEdit] = useState(false);
   const [polygonCoordinates, setPolygonCoordinates] = useState([]);
+  const [countryCode, setCountryCode] = useState("");
+  const [countryName, setCountryName] = useState("");
+  const [stateProvince, setStateProvince] = useState("");
+  const [cityDistrict, setCityDistrict] = useState("");
+  const [landRegistryOffice, setLandRegistryOffice] = useState("");
+  const [parcelReference, setParcelReference] = useState("");
+  const [titleDeedNumber, setTitleDeedNumber] = useState("");
+  const [ownerFullName, setOwnerFullName] = useState("");
+  const [ownerWallet, setOwnerWallet] = useState("");
 
   const [documentFile, setDocumentFile] = useState(null);
   const [geometryFile, setGeometryFile] = useState(null);
@@ -88,14 +98,16 @@ export default function RegisterProperty() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
-  const mapLocked = geometrySource === "official" && !allowEdit;
+  const mapLocked = registrationScope === "local" && geometrySource === "official" && !allowEdit;
   const hasGeometry = Array.isArray(polygonCoordinates) && polygonCoordinates.length >= 3;
+  const isGlobal = registrationScope === "global";
+  const globalWalletValid = /^0x[a-fA-F0-9]{40}$/.test(ownerWallet.trim());
   const estimatedAreaSqm = useMemo(() => estimatePolygonAreaSqm(polygonCoordinates), [polygonCoordinates]);
   const areaDeviationPercent = useMemo(() => {
     if (!parcel?.areaSqm || !estimatedAreaSqm) return 0;
     return Math.abs(((estimatedAreaSqm - parcel.areaSqm) / parcel.areaSqm) * 100);
   }, [estimatedAreaSqm, parcel?.areaSqm]);
-  const isDeviationExceeded = allowEdit && areaDeviationPercent > MAX_ALLOWED_DEVIATION;
+  const isDeviationExceeded = !isGlobal && allowEdit && areaDeviationPercent > MAX_ALLOWED_DEVIATION;
 
   const documentSummary = useMemo(() => {
     if (!documentFile) return "No document selected";
@@ -104,8 +116,8 @@ export default function RegisterProperty() {
 
   const readiness = useMemo(() => {
     const checks = [
-      { label: "Survey number entered", ok: Boolean(surveyNumber?.trim()) },
-      { label: "Official parcel fetched", ok: Boolean(parcel) },
+      { label: isGlobal ? "Country and deed details entered" : "Survey number entered", ok: isGlobal ? Boolean(countryName.trim() && parcelReference.trim() && titleDeedNumber.trim()) : Boolean(surveyNumber?.trim()) },
+      { label: isGlobal ? "Claimant owner identity provided" : "Official parcel fetched", ok: isGlobal ? Boolean(ownerFullName.trim() && globalWalletValid) : Boolean(parcel) },
       { label: "Valid geometry available", ok: hasGeometry },
       { label: "Document uploaded", ok: Boolean(documentFile) },
       { label: "Deviation within limit", ok: !isDeviationExceeded }
@@ -117,7 +129,7 @@ export default function RegisterProperty() {
       total: checks.length,
       percent: Math.round((completed / checks.length) * 100)
     };
-  }, [surveyNumber, parcel, hasGeometry, documentFile, isDeviationExceeded]);
+  }, [isGlobal, countryName, parcelReference, titleDeedNumber, ownerFullName, globalWalletValid, surveyNumber, parcel, hasGeometry, documentFile, isDeviationExceeded]);
 
   async function loadOfficialParcel() {
     try {
@@ -125,6 +137,7 @@ export default function RegisterProperty() {
       setStatus("Fetching cadastral parcel...");
       const data = await fetchParcelBySurveyNumber(surveyNumber);
       setParcel(data.parcel);
+      setRegistrationScope("local");
       setGeometrySource("official");
       setAllowEdit(false);
       setPolygonCoordinates(data.parcel.polygonCoordinates || []);
@@ -163,17 +176,32 @@ export default function RegisterProperty() {
     setStatus("Submitting transaction to blockchain...");
     setResult(null);
 
-    if (!surveyNumber) {
-      setStatusType("error");
-      setStatus("Survey/Khasra number is required.");
-      setIsSubmitting(false);
-      return;
-    }
-    if (!parcel) {
-      setStatusType("error");
-      setStatus("Fetch official parcel first using survey number.");
-      setIsSubmitting(false);
-      return;
+    if (!isGlobal) {
+      if (!surveyNumber) {
+        setStatusType("error");
+        setStatus("Survey/Khasra number is required.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!parcel) {
+        setStatusType("error");
+        setStatus("Fetch official parcel first using survey number.");
+        setIsSubmitting(false);
+        return;
+      }
+    } else {
+      if (!countryName.trim() || !parcelReference.trim() || !titleDeedNumber.trim()) {
+        setStatusType("error");
+        setStatus("Country, parcel reference, and title deed number are required for global registration.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!ownerFullName.trim() || !globalWalletValid) {
+        setStatusType("error");
+        setStatus("Claimant owner name and valid owner wallet are required for global registration.");
+        setIsSubmitting(false);
+        return;
+      }
     }
     if (!documentFile) {
       setStatusType("error");
@@ -209,9 +237,23 @@ export default function RegisterProperty() {
     try {
       const base64 = await readFileAsBase64(documentFile);
       const response = await registerProperty({
+        registrationScope,
         surveyNumber,
-        geometrySource: geometrySource === "official" && allowEdit ? "edited" : geometrySource,
+        geometrySource: !isGlobal && geometrySource === "official" && allowEdit ? "edited" : geometrySource,
         polygonCoordinates,
+        jurisdiction: {
+          countryCode,
+          countryName,
+          stateProvince,
+          cityDistrict,
+          landRegistryOffice,
+          parcelReference,
+          titleDeedNumber
+        },
+        claimant: {
+          ownerFullName,
+          ownerWallet
+        },
         document: {
           fileName: documentFile.name,
           mimeType: documentFile.type,
@@ -243,12 +285,12 @@ export default function RegisterProperty() {
   }
 
   return (
-    <section className="section-stack">
-      <div className="hero">
+    <section className="section-stack register-page">
+      <div className="hero hero-register">
         <h2>Register Property</h2>
-        <p>Survey-number first registration with cadastral boundary lock, controlled edits, and spatial validation.</p>
+        <p>Register local or global land ownership using official records, verifiable geometry, and blockchain audit trail.</p>
       </div>
-      <div className="module-action-bar register-action-bar">
+      <div className="module-action-bar register-action-bar register-toolbar">
         <div>
           <p className="muted">Module Actions</p>
           <h3>Registration Workflow</h3>
@@ -257,7 +299,7 @@ export default function RegisterProperty() {
           {isSubmitting ? "Registering..." : "Register on Chain"}
         </button>
       </div>
-      <div className="readiness-strip panel">
+      <div className="readiness-strip panel register-readiness">
         <div>
           <p className="muted">Registration Readiness</p>
           <h3>{readiness.percent}% complete</h3>
@@ -268,14 +310,45 @@ export default function RegisterProperty() {
         <p className="muted">{readiness.completed}/{readiness.total} checks passed</p>
       </div>
 
-      <div className="grid-2">
-        <form id="register-property-form" className="form panel" onSubmit={onSubmit}>
-          <div className="panel-subtitle">Parcel Identification</div>
+      <div className="grid-2 register-layout">
+        <form id="register-property-form" className="form panel register-form" onSubmit={onSubmit}>
+          <div className="register-step-head">
+            <div className="panel-subtitle">Step 1</div>
+            <h3>Registration Scope & Parcel Identification</h3>
+          </div>
+          <label>
+            Registration Scope
+            <select
+              value={registrationScope}
+              onChange={(e) => {
+                const next = e.target.value;
+                setRegistrationScope(next);
+                setParcel(null);
+                if (next === "global") {
+                  setGeometrySource("edited");
+                  setAllowEdit(false);
+                } else {
+                  setGeometrySource("official");
+                }
+              }}
+            >
+              <option value="local">Local Cadastral Registry</option>
+              <option value="global">Global Ownership Claim (Official Documents)</option>
+            </select>
+          </label>
           <label>
             Survey / Khasra Number
-            <input value={surveyNumber} onChange={(e) => setSurveyNumber(e.target.value)} placeholder="e.g. 118/2" required />
+            <input
+              value={surveyNumber}
+              onChange={(e) => setSurveyNumber(e.target.value)}
+              placeholder="e.g. 118/2"
+              required={!isGlobal}
+              disabled={isGlobal}
+            />
           </label>
-          <button type="button" onClick={loadOfficialParcel}>Fetch Official Parcel</button>
+          <button type="button" className="secondary-btn" onClick={loadOfficialParcel} disabled={isGlobal}>
+            Fetch Official Parcel
+          </button>
 
           {parcel ? (
             <div className="panel info-panel">
@@ -290,6 +363,7 @@ export default function RegisterProperty() {
             <select value={geometrySource} onChange={(e) => setGeometrySource(e.target.value)}>
               <option value="official">Official Cadastral Boundary (Locked)</option>
               <option value="imported">Import GeoJSON/KML</option>
+              <option value="edited">Draw/Edit Manually</option>
             </select>
           </label>
 
@@ -304,7 +378,7 @@ export default function RegisterProperty() {
                 Import Survey Geometry (GeoJSON/KML)
                 <input type="file" accept=".geojson,.json,.kml" onChange={(e) => setGeometryFile(e.target.files?.[0] || null)} />
               </label>
-              <button type="button" onClick={importGeometry}>Import Geometry</button>
+              <button type="button" className="secondary-btn" onClick={importGeometry}>Import Geometry</button>
             </>
           )}
 
@@ -314,40 +388,92 @@ export default function RegisterProperty() {
             polygonCoordinates={polygonCoordinates}
             locked={mapLocked}
           />
-          <div className="map-metrics">
+          <div className="map-metrics register-metrics">
             <p className="muted">Selected polygon points: {polygonCoordinates.length}</p>
             <p className="muted">Estimated area: {estimatedAreaSqm ? `${estimatedAreaSqm.toFixed(2)} sqm` : "N/A"}</p>
-            {parcel ? (
+            {parcel && !isGlobal ? (
               <p className={`muted ${isDeviationExceeded ? "error" : ""}`}>
                 Area deviation: {areaDeviationPercent.toFixed(2)}% {allowEdit ? `(max ${MAX_ALLOWED_DEVIATION}%)` : ""}
               </p>
             ) : null}
           </div>
 
-          <div className="panel-subtitle">Document Registry Metadata</div>
-          <label>
-            Document Type
-            <select value={documentType} onChange={(e) => setDocumentType(e.target.value)}>
-              <option>Sale Deed</option>
-              <option>Gift Deed</option>
-              <option>Mutation Certificate</option>
-              <option>Encumbrance Certificate</option>
-              <option>Tax Receipt</option>
-            </select>
-          </label>
-          <label>
-            Document Number
-            <input value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} placeholder="e.g. SD/HR/2026/0098" />
-          </label>
-          <label>
-            Issuing Authority
-            <input value={issuingAuthority} onChange={(e) => setIssuingAuthority(e.target.value)} placeholder="Sub-Registrar Gurugram II" />
-          </label>
-          <label>
-            Issue Date
-            <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
-          </label>
-          <label>
+          {isGlobal ? (
+            <>
+              <div className="register-step-head">
+                <div className="panel-subtitle">Step 2</div>
+                <h3>Global Jurisdiction & Ownership Claim</h3>
+              </div>
+              <div className="register-field-grid">
+                <label>
+                  Country Name
+                  <input value={countryName} onChange={(e) => setCountryName(e.target.value)} placeholder="e.g. United States" required={isGlobal} />
+                </label>
+                <label>
+                  Country Code (ISO-2)
+                  <input value={countryCode} onChange={(e) => setCountryCode(e.target.value.toUpperCase())} placeholder="e.g. US" />
+                </label>
+                <label>
+                  State / Province
+                  <input value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} placeholder="e.g. California" />
+                </label>
+                <label>
+                  City / District
+                  <input value={cityDistrict} onChange={(e) => setCityDistrict(e.target.value)} placeholder="e.g. Los Angeles County" />
+                </label>
+                <label>
+                  Land Registry Office
+                  <input value={landRegistryOffice} onChange={(e) => setLandRegistryOffice(e.target.value)} placeholder="Official registry authority" />
+                </label>
+                <label>
+                  Parcel / Plot Reference
+                  <input value={parcelReference} onChange={(e) => setParcelReference(e.target.value)} placeholder="Official parcel reference" required={isGlobal} />
+                </label>
+                <label>
+                  Title Deed Number
+                  <input value={titleDeedNumber} onChange={(e) => setTitleDeedNumber(e.target.value)} placeholder="Official title/deed number" required={isGlobal} />
+                </label>
+                <label>
+                  Claimant Owner Full Name
+                  <input value={ownerFullName} onChange={(e) => setOwnerFullName(e.target.value)} placeholder="Owner name on official paper" required={isGlobal} />
+                </label>
+                <label>
+                  Claimant Owner Wallet (EVM)
+                  <input value={ownerWallet} onChange={(e) => setOwnerWallet(e.target.value)} placeholder="0x..." required={isGlobal} />
+                </label>
+              </div>
+            </>
+          ) : null}
+
+          <div className="register-step-head">
+            <div className="panel-subtitle">{isGlobal ? "Step 3" : "Step 2"}</div>
+            <h3>Document Registry Metadata</h3>
+          </div>
+          <div className="register-field-grid">
+            <label>
+              Document Type
+              <select value={documentType} onChange={(e) => setDocumentType(e.target.value)}>
+                <option>Sale Deed</option>
+                <option>Gift Deed</option>
+                <option>Mutation Certificate</option>
+                <option>Encumbrance Certificate</option>
+                <option>Tax Receipt</option>
+              </select>
+            </label>
+            <label>
+              Document Number
+              <input value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} placeholder="e.g. SD/HR/2026/0098" />
+            </label>
+            <label>
+              Issuing Authority
+              <input value={issuingAuthority} onChange={(e) => setIssuingAuthority(e.target.value)} placeholder="Sub-Registrar Gurugram II" />
+            </label>
+            <label>
+              Issue Date
+              <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+            </label>
+          </div>
+          <label className="register-document-upload">
             Property Document (PDF/JPEG/PNG/TXT)
             <input
               type="file"
@@ -358,18 +484,18 @@ export default function RegisterProperty() {
           </label>
           <p className="muted file-summary">{documentSummary}</p>
 
-          <button type="submit" disabled={isSubmitting}>
+          <button type="submit" className="register-submit-btn" disabled={isSubmitting}>
             {isSubmitting ? "Registering..." : "Register on Chain"}
           </button>
         </form>
 
-        <aside className="panel">
+        <aside className="panel register-side-panel">
           <h3>Real-World Validation Pipeline</h3>
           <ul className="gov-list">
-            <li>Select official parcel by survey number</li>
-            <li>Optional controlled edit or survey import</li>
-            <li>Spatial validation: overlap, area deviation, ward boundary</li>
-            <li>Store full geometry in DB, only parcel hash on-chain</li>
+            <li>Select registration scope: local cadastral or global ownership claim</li>
+            <li>Attach official deed/paper and provide traceable jurisdiction metadata</li>
+            <li>Validate geometry and run duplicate-risk analysis before anchoring on-chain</li>
+            <li>Store complete metadata off-chain; anchor tamper-proof reference hash on-chain</li>
           </ul>
           <div className="checklist">
             {readiness.checks.map((item) => (

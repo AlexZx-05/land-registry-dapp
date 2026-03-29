@@ -117,12 +117,12 @@ export default function TransferProperty() {
   }
 
   return (
-    <section className="section-stack">
-      <div className="hero">
+    <section className="section-stack transfer-page">
+      <div className="hero hero-transfer">
         <h2>Transfer Property</h2>
         <p>Execute ownership transfer after approvals; every change is written on-chain and to timeline.</p>
       </div>
-      <div className="module-action-bar transfer-action-bar">
+      <div className="module-action-bar transfer-action-bar transfer-toolbar">
         <div>
           <p className="muted">Module Actions</p>
           <h3>Ownership Transfer</h3>
@@ -131,7 +131,7 @@ export default function TransferProperty() {
           {isSubmitting ? "Transferring..." : "Transfer Ownership"}
         </button>
       </div>
-      <div className="readiness-strip panel">
+      <div className="readiness-strip panel transfer-readiness">
         <div>
           <p className="muted">Transfer Readiness</p>
           <h3>{Math.round((readiness.completed / readiness.total) * 100)}% complete</h3>
@@ -141,14 +141,17 @@ export default function TransferProperty() {
         </div>
         <p className="muted">{readiness.completed}/{readiness.total} checks passed</p>
       </div>
-      <div className="grid-2">
-        <form id="transfer-property-form" className="form panel" onSubmit={onSubmit}>
-          <div className="panel-subtitle">Transfer Request</div>
+      <div className="grid-2 transfer-layout">
+        <form id="transfer-property-form" className="form panel transfer-form" onSubmit={onSubmit}>
+          <div className="transfer-step-head">
+            <div className="panel-subtitle">Step 1</div>
+            <h3>Transfer Request</h3>
+          </div>
           <label>
             Property Chain ID
             <input value={chainId} onChange={(e) => setChainId(e.target.value)} required />
           </label>
-          <button type="button" onClick={loadPropertySnapshot} disabled={isLoadingSnapshot}>
+          <button type="button" className="secondary-btn" onClick={loadPropertySnapshot} disabled={isLoadingSnapshot}>
             {isLoadingSnapshot ? "Loading..." : "Load Property Snapshot"}
           </button>
 
@@ -165,11 +168,11 @@ export default function TransferProperty() {
             <input value={newOwner} onChange={(e) => setNewOwner(e.target.value)} placeholder="0x..." required />
           </label>
           {!walletValid && newOwner ? <p className="error">Enter a valid 42-character EVM wallet address.</p> : null}
-          <button type="submit" disabled={isSubmitting}>
+          <button type="submit" className="transfer-submit-btn" disabled={isSubmitting}>
             {isSubmitting ? "Transferring..." : "Transfer Ownership"}
           </button>
         </form>
-        <aside className="panel">
+        <aside className="panel transfer-side-panel">
           <h3>Transfer Notes</h3>
           <ul className="gov-list">
             <li>Requires all approval stages completed</li>

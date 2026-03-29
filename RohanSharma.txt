@@ -1,0 +1,10 @@
+Instrument Type: Sale Deed
+Instrument No: AE/REG/2026/99021
+Registry Office: Dubai Land Department
+Execution Date: 20-03-2026
+Registration Date: 29-03-2026
+Property Description: Parcel AE-DXB-PLT-99021, Jumeirah, Dubai
+Seller: Test Seller
+Buyer: Rohan Sharma
+Consideration: AED 950000
+Witnesses: 2

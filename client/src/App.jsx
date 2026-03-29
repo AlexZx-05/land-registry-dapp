@@ -20,6 +20,13 @@ export default function App() {
   const chromeRef = useRef(null);
   const roleRef = useRef(null);
   const isAuthRoute = location.pathname === "/login" || location.pathname === "/signup";
+  const runtimeEnv = String(import.meta.env.VITE_APP_ENV || import.meta.env.MODE || "development").toLowerCase();
+  const envLabel =
+    runtimeEnv === "production"
+      ? "Production"
+      : runtimeEnv === "staging"
+        ? "Staging"
+        : "Development";
 
   useEffect(() => {
     function onOutsideClick(event) {
@@ -66,10 +73,18 @@ export default function App() {
   
   return (
     <div className="app-shell">
-      <div ref={chromeRef} className={`app-chrome ${compactChrome ? "compact" : ""}`}>
+      <div
+        ref={chromeRef}
+        className={`app-chrome ${compactChrome ? "compact" : ""} ${isAuthRoute ? "auth-mode" : ""}`}
+      >
         <div className="gov-strip">
           <div className="gov-strip-item">Official Property Governance Service</div>
-          <div className="gov-strip-item">Environment: Local Development</div>
+          <div className="gov-strip-item gov-env">
+            <span className="gov-env-label">System Status</span>
+            <span className={`gov-env-badge gov-env-${runtimeEnv === "production" ? "production" : runtimeEnv === "staging" ? "staging" : "development"}`}>
+              {envLabel}
+            </span>
+          </div>
         </div>
         <header className="topbar">
           <div className="masthead">
@@ -93,7 +108,7 @@ export default function App() {
                 >
                   <span className="role-dot" />
                   {user?.role}
-                  <span className={`role-chevron ${roleMenuOpen ? "open" : ""}`} aria-hidden="true">▾</span>
+                  <span className={`role-chevron ${roleMenuOpen ? "open" : ""}`} aria-hidden="true">v</span>
                 </button>
                 {roleMenuOpen ? (
                   <div className="role-menu">
@@ -129,7 +144,7 @@ export default function App() {
         ) : null}
       </div>
 
-      <main className="content">
+      <main className={`content ${isAuthRoute ? "content-auth" : ""}`}>
         <Routes>
           <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
           <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
@@ -171,3 +186,4 @@ export default function App() {
     </div>
   );
 }
+

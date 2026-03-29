@@ -1,15 +1,23 @@
 import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const projectRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const thisFilePath = fileURLToPath(import.meta.url);
+const projectRoot = path.resolve(path.dirname(thisFilePath), "..");
 const serverEnvPath = path.join(projectRoot, "server", ".env");
 
 function runDeployCommand() {
-  const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-  const result = spawnSync(npmCmd, ["--workspace", "blockchain", "run", "deploy:local"], {
+  const npmCli = process.env.npm_execpath;
+  const command = npmCli ? process.execPath : (process.platform === "win32" ? "npm.cmd" : "npm");
+  const args = npmCli
+    ? [npmCli, "--workspace", "blockchain", "run", "deploy:local"]
+    : ["--workspace", "blockchain", "run", "deploy:local"];
+
+  const result = spawnSync(command, args, {
     cwd: projectRoot,
-    encoding: "utf8"
+    encoding: "utf8",
+    stdio: "pipe"
   });
 
   if (result.error) {

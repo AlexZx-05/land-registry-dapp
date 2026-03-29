@@ -109,26 +109,26 @@ export default function VerifyProperty() {
   }
 
   return (
-    <section className="section-stack">
-      <div className="hero">
+    <section className="section-stack verify-page">
+      <div className="hero hero-verify">
         <h2>Verify Property</h2>
         <p>Complete multi-level governance approvals before final blockchain verification.</p>
       </div>
-      <div className="module-action-bar">
+      <div className="module-action-bar verify-toolbar">
         <div>
           <p className="muted">Module Actions</p>
           <h3>Governance Verification</h3>
         </div>
         <div className="module-action-buttons">
-          <button type="button" onClick={loadPropertySnapshot} disabled={isLoadingSnapshot}>
+          <button type="button" className="secondary-btn" onClick={loadPropertySnapshot} disabled={isLoadingSnapshot}>
             {isLoadingSnapshot ? "Loading..." : "Load Approval State"}
           </button>
-          <button type="submit" form="verify-property-form" disabled={!canFinalVerify || isSubmitting}>
+          <button type="submit" form="verify-property-form" className="verify-submit-btn" disabled={!canFinalVerify || isSubmitting}>
             {isSubmitting ? "Submitting..." : "Verify on Blockchain"}
           </button>
         </div>
       </div>
-      <div className="readiness-strip panel">
+      <div className="readiness-strip panel verify-readiness">
         <div>
           <p className="muted">Verification Readiness</p>
           <h3>{readinessPercent}% complete</h3>
@@ -138,14 +138,17 @@ export default function VerifyProperty() {
         </div>
         <p className="muted">{approvalStatus.completed}/3 approvals completed</p>
       </div>
-      <div className="grid-2">
-        <form id="verify-property-form" className="form panel" onSubmit={onSubmit}>
-          <div className="panel-subtitle">Governance Approval Controls</div>
+      <div className="grid-2 verify-layout">
+        <form id="verify-property-form" className="form panel verify-form" onSubmit={onSubmit}>
+          <div className="verify-step-head">
+            <div className="panel-subtitle">Step 1</div>
+            <h3>Governance Approval Controls</h3>
+          </div>
           <label>
             Property Chain ID
             <input value={chainId} onChange={(e) => setChainId(e.target.value)} required />
           </label>
-          <button type="button" onClick={loadPropertySnapshot} disabled={isLoadingSnapshot}>
+          <button type="button" className="secondary-btn" onClick={loadPropertySnapshot} disabled={isLoadingSnapshot}>
             {isLoadingSnapshot ? "Loading..." : "Load Approval State"}
           </button>
 
@@ -160,6 +163,7 @@ export default function VerifyProperty() {
           <div className="approval-actions">
             <button
               type="button"
+              className="secondary-btn"
               onClick={() => onApprove("tehsildar", true)}
               disabled={!canApproveTehsildar || isSubmitting}
               title={canApproveTehsildar ? "" : "Only tehsildar/admin can approve this stage"}
@@ -168,6 +172,7 @@ export default function VerifyProperty() {
             </button>
             <button
               type="button"
+              className="secondary-btn"
               onClick={() => onApprove("sdm", true)}
               disabled={!canApproveSdm || isSubmitting}
               title={canApproveSdm ? "" : "Only sdm/admin can approve this stage"}
@@ -176,6 +181,7 @@ export default function VerifyProperty() {
             </button>
             <button
               type="button"
+              className="secondary-btn"
               onClick={() => onApprove("collector", true)}
               disabled={!canApproveCollector || isSubmitting}
               title={canApproveCollector ? "" : "Only collector/admin can approve this stage"}
@@ -185,13 +191,14 @@ export default function VerifyProperty() {
           </div>
           <button
             type="submit"
+            className="verify-submit-btn"
             disabled={!canFinalVerify || isSubmitting}
             title={canFinalVerify ? "" : "Only officer/admin can run final blockchain verification"}
           >
             {isSubmitting ? "Submitting..." : "Verify on Blockchain"}
           </button>
         </form>
-        <aside className="panel">
+        <aside className="panel verify-side-panel">
           <h3>Approval Flow</h3>
           <div className="stage-grid">
             <article className="stage-card">

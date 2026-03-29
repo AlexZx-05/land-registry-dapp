@@ -99,6 +99,16 @@ export async function fetchMe() {
   return data;
 }
 
+export async function fetchPendingApprovals() {
+  const { data } = await api.get("/auth/pending-approvals");
+  return data;
+}
+
+export async function reviewPendingApproval(userId, action, remark = "") {
+  const { data } = await api.post(`/auth/pending-approvals/${userId}/review`, { action, remark });
+  return data;
+}
+
 export async function fetchProperties() {
   const { data } = await api.get("/properties");
   return data;
