@@ -260,11 +260,13 @@ button:disabled {
 }
 
 .role-switcher {
-  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .role-trigger {
-  min-width: 134px;
+  min-width: 138px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -279,6 +281,8 @@ button:disabled {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   transform: none;
   filter: none;
+  cursor: default;
+  pointer-events: none;
 }
 
 .role-trigger:hover {
@@ -295,16 +299,23 @@ button:disabled {
   box-shadow: 0 0 10px rgba(120, 221, 255, 0.5);
 }
 
-.role-chevron {
-  margin-left: auto;
-  font-size: 0.84rem;
-  line-height: 1;
-  opacity: 0.92;
-  transition: transform 0.18s ease;
+.role-logout-btn {
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.08));
+  color: #eaf5ff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.role-chevron.open {
-  transform: rotate(180deg);
+.role-logout-btn:hover {
+  transform: translateY(0);
+  filter: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
 }
 
 .wallet-primary-btn {
@@ -313,56 +324,10 @@ button:disabled {
 }
 
 .role-trigger:focus-visible,
+.role-logout-btn:focus-visible,
 .wallet-primary-btn:focus-visible {
   outline: 2px solid rgba(152, 216, 255, 0.95);
   outline-offset: 2px;
-}
-
-.role-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 30;
-  width: 230px;
-  display: grid;
-  gap: 6px;
-  padding: 8px;
-  border-radius: 12px;
-  border: 1px solid #d6e3f1;
-  background: #ffffff;
-  box-shadow: var(--shadow-md);
-  animation: rise 170ms ease-out;
-}
-
-.role-option {
-  text-transform: capitalize;
-  background: #f6faff;
-  color: #12324e;
-  border: 1px solid #e0ebf7;
-}
-
-.role-option:hover {
-  background: #e9f5ff;
-}
-
-.role-option.active {
-  color: #fff;
-  border-color: transparent;
-  background: linear-gradient(130deg, var(--brand-accent), #1e7dd6);
-}
-
-.menu-head {
-  font-weight: 700;
-  color: #14334f;
-  padding: 4px 6px 0;
-}
-
-.menu-sub {
-  font-size: 0.78rem;
-  color: #5f7690;
-  padding: 0 6px 6px;
-  border-bottom: 1px solid #e4edf7;
-  margin-bottom: 4px;
 }
 
 .wallet-account {

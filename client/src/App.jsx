@@ -14,11 +14,9 @@ export default function App() {
   const location = useLocation();
   const { account, connectWallet, walletError } = useWallet();
   const { user, isAuthenticated, logoutAction } = useAuth();
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [compactChrome, setCompactChrome] = useState(false);
   const compactRef = useRef(false);
   const chromeRef = useRef(null);
-  const roleRef = useRef(null);
   const isAuthRoute = location.pathname === "/login" || location.pathname === "/signup";
   const runtimeEnv = String(import.meta.env.VITE_APP_ENV || import.meta.env.MODE || "development").toLowerCase();
   const envLabel =
@@ -27,17 +25,6 @@ export default function App() {
       : runtimeEnv === "staging"
         ? "Staging"
         : "Development";
-
-  useEffect(() => {
-    function onOutsideClick(event) {
-      if (!roleRef.current?.contains(event.target)) {
-        setRoleMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", onOutsideClick);
-    return () => document.removeEventListener("mousedown", onOutsideClick);
-  }, []);
 
   useEffect(() => {
     let rafId = 0;
@@ -98,34 +85,18 @@ export default function App() {
           </div>
           <div className="wallet-bar">
             {isAuthenticated ? (
-              <div className="role-switcher" ref={roleRef}>
+              <div className="role-switcher">
                 <button
                   type="button"
                   className="role-trigger"
-                  onClick={() => setRoleMenuOpen((open) => !open)}
-                  aria-expanded={roleMenuOpen}
-                  aria-haspopup="menu"
+                  aria-label={`Logged in role: ${user?.role}`}
                 >
                   <span className="role-dot" />
                   {user?.role}
-                  <span className={`role-chevron ${roleMenuOpen ? "open" : ""}`} aria-hidden="true">v</span>
                 </button>
-                {roleMenuOpen ? (
-                  <div className="role-menu">
-                    <p className="menu-head">{user?.name}</p>
-                    <p className="menu-sub">{user?.email}</p>
-                    <button
-                      type="button"
-                      className="role-option"
-                      onClick={async () => {
-                        await logoutAction();
-                        setRoleMenuOpen(false);
-                      }}
-                    >
-                      Logout
-                    </button>
-                  </div>
-                ) : null}
+                <button type="button" className="role-logout-btn" onClick={logoutAction}>
+                  Logout
+                </button>
               </div>
             ) : null}
             {!isAuthRoute ? (
